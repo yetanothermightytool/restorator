@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veeam Security Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root[data-theme="dark"] {
+  --bg:#111317; --bg2:#16191e; --bg3:#1c2028;
+  --line:#252b35; --line2:#2e3645;
+  --tx:#d4dde8; --tx2:#6b7f95; --tx3:#3e5068; --head:#f0f4f8;
+  --blue:#3b9eff; --blue-dim:rgba(59,158,255,.12);
+  --red:#f04e68; --red-dim:rgba(240,78,104,.1);
+  --amber:#f5a623; --amber-dim:rgba(245,166,35,.1);
+  --green:#34d399; --green-dim:rgba(52,211,153,.1);
+  --card-sh:0 1px 3px rgba(0,0,0,.4);
+}
+:root[data-theme="light"] {
+  --bg:#f5f7fa; --bg2:#ffffff; --bg3:#eef1f6;
+  --line:#e2e8f0; --line2:#cbd5e1;
+  --tx:#374151; --tx2:#6b7280; --tx3:#9ca3af; --head:#111827;
+  --blue:#1d6fd8; --blue-dim:rgba(29,111,216,.08);
+  --red:#dc2626; --red-dim:rgba(220,38,38,.08);
+  --amber:#b45309; --amber-dim:rgba(180,83,9,.08);
+  --green:#059669; --green-dim:rgba(5,150,105,.08);
+  --card-sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:14px;-webkit-font-smoothing:antialiased;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;line-height:1.5;transition:background .25s,color .25s;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+
+.app{max-width:1280px;margin:0 auto;padding:0 28px 72px;}
+
+/* ── MODE BANNER ── */
+.mode-banner {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 16px; border-radius:8px; font-size:12px;
+  margin-bottom:20px; border:1px solid;
+}
+.mode-banner.demo {
+  background:var(--amber-dim); border-color:rgba(245,166,35,.25); color:var(--amber);
+}
+.mode-banner.live {
+  background:var(--green-dim); border-color:rgba(52,211,153,.2); color:var(--green);
+}
+[data-theme="light"] .mode-banner.demo { border-color:rgba(180,83,9,.2); }
+[data-theme="light"] .mode-banner.live { border-color:rgba(5,150,105,.2); }
+.mode-banner b { font-weight:600; }
+.mode-banner a { color:inherit; text-decoration:underline; cursor:pointer; }
+.banner-dot { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0; }
+.banner-dot.live-anim { animation:blink 2s infinite; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 20px;border-bottom:1px solid var(--line);margin-bottom:24px;gap:16px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-icon{width:36px;height:36px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.brand-name{font-size:15px;font-weight:600;color:var(--head);letter-spacing:-.2px;}
+.brand-sub{font-size:11px;color:var(--tx3);font-family:'DM Mono',monospace;letter-spacing:.3px;margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.live-pill{display:flex;align-items:center;gap:6px;font-size:11px;font-family:'DM Mono',monospace;color:var(--green);letter-spacing:.5px;background:var(--green-dim);border:1px solid rgba(52,211,153,.2);border-radius:20px;padding:4px 10px;}
+[data-theme="light"] .live-pill{border-color:rgba(5,150,105,.2);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+.ts{font-size:11px;color:var(--tx3);font-family:'DM Mono',monospace;}
+.theme-btn{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border:1px solid var(--line2);border-radius:8px;font-size:12px;color:var(--tx2);background:var(--bg2);transition:border-color .2s,color .2s;}
+.theme-btn:hover{border-color:var(--blue);color:var(--blue);}
+.track{width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;transition:background .25s;flex-shrink:0;}
+[data-theme="dark"] .track{background:rgba(59,158,255,.3);}
+[data-theme="light"] .track{background:rgba(29,111,216,.2);}
+.thumb{position:absolute;top:2px;width:14px;height:14px;border-radius:50%;background:var(--blue);transition:left .25s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;}
+[data-theme="dark"] .thumb{left:2px;}
+[data-theme="light"] .thumb{left:16px;}
+
+/* ── SOURCE BAR ── */
+.source-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+.src{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:5px 12px;font-size:11px;color:var(--tx2);font-family:'DM Mono',monospace;box-shadow:var(--card-sh);}
+.src-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.dot-ok{background:var(--green);box-shadow:0 0 0 2px var(--green-dim);animation:blink 3s infinite;}
+.dot-warn{background:var(--amber);}
+.dot-err{background:var(--red);}
+.dot-unknown{background:var(--tx3);}
+.src b{color:var(--tx);font-weight:500;}
+
+/* ── RISK BANNER ── */
+.risk-banner{display:flex;align-items:center;gap:28px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:var(--card-sh);position:relative;overflow:hidden;flex-wrap:wrap;gap:20px;}
+.risk-stripe{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:12px 0 0 12px;}
+.risk-stripe.critical{background:var(--red);}
+.risk-stripe.high{background:var(--amber);}
+.risk-stripe.medium{background:var(--amber);}
+.risk-stripe.low{background:var(--green);}
+.risk-gauge{position:relative;width:72px;height:72px;flex-shrink:0;}
+.risk-gauge svg{transform:rotate(-90deg);}
+.risk-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'DM Mono',monospace;}
+.risk-num strong{font-size:20px;font-weight:500;line-height:1;}
+.risk-num span{font-size:9px;color:var(--tx3);margin-top:2px;}
+.risk-body{flex:1;min-width:240px;}
+.risk-title{font-size:16px;font-weight:600;color:var(--head);margin-bottom:4px;letter-spacing:-.2px;}
+.risk-desc{font-size:13px;color:var(--tx2);line-height:1.55;max-width:520px;}
+.risk-chips{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.chip{font-size:11px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:4px;font-weight:500;letter-spacing:.3px;}
+.chip-red{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,78,104,.2);}
+.chip-amber{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2);}
+.chip-blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,158,255,.2);}
+.chip-green{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+[data-theme="light"] .chip-red{border-color:rgba(220,38,38,.15);}
+[data-theme="light"] .chip-amber{border-color:rgba(180,83,9,.15);}
+[data-theme="light"] .chip-blue{border-color:rgba(29,111,216,.15);}
+[data-theme="light"] .chip-green{border-color:rgba(5,150,105,.15);}
+.risk-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+.btn-primary{padding:9px 18px;border-radius:7px;background:var(--blue);color:#fff;font-size:13px;font-weight:500;transition:opacity .2s,transform .15s;}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);}
+.btn-ghost{padding:9px 18px;border-radius:7px;border:1px solid var(--line2);color:var(--tx2);font-size:13px;transition:border-color .2s,color .2s;}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:18px 20px;box-shadow:var(--card-sh);transition:border-color .2s;}
+.stat:hover{border-color:var(--line2);}
+.stat-label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.stat-val{font-size:32px;font-weight:600;line-height:1;margin-bottom:6px;font-family:'DM Mono',monospace;}
+.stat-hint{font-size:12px;color:var(--tx2);}
+.c-blue{color:var(--blue);}.c-red{color:var(--red);}.c-amber{color:var(--amber);}
+
+/* ── SECTION HEADING ── */
+.sh{font-size:11px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx3);margin-bottom:14px;margin-top:4px;display:flex;align-items:center;gap:10px;}
+.sh::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* ── TWO COL ── */
+.two-col{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px;}
+
+/* ── CARD ── */
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--card-sh);}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:var(--bg3);}
+.card-title{font-size:13px;font-weight:600;color:var(--head);}
+.card-sub{font-size:11px;color:var(--tx3);margin-top:2px;font-family:'DM Mono',monospace;}
+
+/* ── CVE TABLE ── */
+.cve-grid{display:grid;grid-template-columns:148px 80px 60px 1fr 150px;}
+.cve-row{display:contents;}
+.cve-row>*{padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;display:flex;align-items:center;transition:background .12s;}
+.cve-row:last-child>*{border-bottom:none;}
+.cve-row:not(.hdr):hover>*{background:var(--bg3);}
+.cve-row.hdr>*{background:var(--bg3);font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);padding:9px 16px;border-bottom:1px solid var(--line);}
+.cve-row.hdr:hover>*{background:var(--bg3);}
+.cve-id{font-family:'DM Mono',monospace;color:var(--blue);font-size:11px;cursor:pointer;}
+.cve-id:hover{text-decoration:underline;}
+.badge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;font-family:'DM Mono',monospace;letter-spacing:.4px;width:fit-content;}
+.badge-crit{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,78,104,.2);}
+.badge-high{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.2);}
+[data-theme="light"] .badge-crit{border-color:rgba(220,38,38,.15);}
+[data-theme="light"] .badge-high{border-color:rgba(180,83,9,.15);}
+.cvss{font-family:'DM Mono',monospace;font-weight:500;}
+.cvss.r{color:var(--red);}.cvss.a{color:var(--amber);}
+.cve-desc{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.status-cell{display:flex;align-items:center;gap:6px;font-size:11px;}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot.affected{background:var(--red);}.dot.patched{background:var(--green);}
+
+/* ── EMPTY STATE ── */
+.empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:13px;}
+
+/* ── TIMELINE ── */
+.timeline{padding:20px;display:flex;flex-direction:column;}
+.tl-item{display:flex;gap:14px;padding-bottom:20px;position:relative;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:11px;top:24px;bottom:0;width:1px;background:var(--line);}
+.tl-dot{width:23px;height:23px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;margin-top:1px;border:1px solid var(--line2);}
+.tl-dot.cve{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.tl-dot.patch{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.tl-dot.now{background:var(--blue-dim);border-color:var(--blue);color:var(--blue);}
+.tl-date{font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;margin-bottom:2px;}
+.tl-title{font-size:12px;color:var(--tx);margin-bottom:2px;font-weight:500;}
+.tl-meta{font-size:11px;color:var(--tx2);}
+
+/* ── INSTANCES ── */
+.instance-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);}
+.inst{background:var(--bg2);padding:18px 20px;transition:background .15s;}
+.inst:hover{background:var(--bg3);}
+.inst-name{font-size:13px;font-weight:600;color:var(--head);margin-bottom:2px;}
+.inst-ver{font-size:11px;font-family:'DM Mono',monospace;color:var(--blue);margin-bottom:14px;}
+.bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:5px;}
+.bar-track{height:3px;background:var(--line2);border-radius:2px;overflow:hidden;margin-bottom:10px;}
+.bar-fill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.fill-ok{background:var(--green);}.fill-warn{background:var(--amber);}.fill-crit{background:var(--red);}
+
+/* ── CODE ── */
+.code-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.code-wrap{padding:16px;}
+.code-box{background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:16px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;color:var(--tx2);overflow-x:auto;}
+.code-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+.code-file{font-size:12px;font-weight:500;color:var(--tx);}
+.code-lang{font-size:10px;color:var(--tx3);letter-spacing:.5px;}
+.copy-btn{font-size:11px;font-family:'DM Mono',monospace;color:var(--tx3);border:1px solid var(--line2);border-radius:4px;padding:3px 8px;transition:color .2s,border-color .2s;}
+.copy-btn:hover{color:var(--blue);border-color:var(--blue);}
+.kw{color:var(--blue);}.str{color:var(--green);}.cmt{color:var(--tx3);font-style:italic;}.fn{color:var(--amber);}.num{color:var(--red);}
+
+/* ── NOTIF / CONFIG ── */
+.two-col-b{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.notif-row{display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--line);transition:background .12s;}
+.notif-row:last-child{border-bottom:none;}
+.notif-row:hover{background:var(--bg3);}
+.notif-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:var(--bg3);border:1px solid var(--line);}
+.notif-name{font-size:13px;color:var(--tx);font-weight:500;}
+.notif-hint{font-size:11px;color:var(--tx3);margin-top:1px;}
+.tgl{width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;transition:background .2s;flex-shrink:0;margin-left:auto;}
+.tgl::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--tx3);transition:all .2s;}
+.tgl.on{background:rgba(52,211,153,.3);}.tgl.on::after{left:16px;background:var(--green);}
+.cfg-row{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);font-size:13px;}
+.cfg-row:last-child{border-bottom:none;}
+.cfg-k{color:var(--tx2);}.cfg-v{font-family:'DM Mono',monospace;font-size:12px;color:var(--blue);font-weight:500;}
+
+/* ── SCAN ── */
+.scan-wrap{padding:16px 20px;}
+.scan-btn{width:100%;padding:12px;border:1px solid var(--blue);border-radius:8px;color:var(--blue);font-size:13px;font-weight:500;letter-spacing:.3px;background:var(--blue-dim);display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s,transform .15s;}
+.scan-btn:hover{background:rgba(59,158,255,.18);transform:translateY(-1px);}
+.scan-btn.running{animation:glowpulse 1.4s infinite;}
+@keyframes glowpulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 16px rgba(59,158,255,.35)}}
+.prog-wrap{display:none;margin-top:14px;}
+.prog-wrap.show{display:block;}
+.prog-bar{height:2px;background:var(--line2);border-radius:1px;overflow:hidden;margin-bottom:7px;}
+.prog-fill{height:100%;background:var(--blue);border-radius:1px;transition:width .3s ease;}
+.prog-lbl{font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;}
+
+/* ── SKELETON LOADER ── */
+.skel{background:linear-gradient(90deg,var(--line) 25%,var(--line2) 50%,var(--line) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade-up{animation:up .4s ease both;}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}
+.d4{animation-delay:.2s}.d5{animation-delay:.25s}
+
+@media(max-width:1060px){
+  .two-col,.two-col-b,.code-grid{grid-template-columns:1fr;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .instance-row{grid-template-columns:1fr;}
+  .cve-grid{grid-template-columns:130px 72px 52px 1fr;}
+  .cve-row>*:nth-child(5){display:none;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🛡</div>
+      <div>
+        <div class="brand-name">Veeam Security Intelligence</div>
+        <div class="brand-sub">CVE · Patch Compliance · Risk Scoring</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-pill"><div class="live-dot"></div><span id="modeLabel">Connecting…</span></div>
+      <div class="ts" id="lastScanTs">—</div>
+      <button class="theme-btn" onclick="toggleTheme()">
+        <div class="track"><div class="thumb" id="thumb">🌙</div></div>
+        <span id="thlbl">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MODE BANNER -->
+  <div class="mode-banner demo" id="modeBanner" style="display:none"></div>
+
+  <!-- SOURCE BAR -->
+  <div class="source-bar fade-up d1" id="sourceBar">
+    <div class="src"><div class="src-dot dot-unknown"></div><b>Veeam API</b>&nbsp;<span class="skel" style="width:120px;height:10px;display:inline-block;vertical-align:middle"></span></div>
+    <div class="src"><div class="src-dot dot-unknown"></div><b>NVD API v2</b>&nbsp;<span class="skel" style="width:80px;height:10px;display:inline-block;vertical-align:middle"></span></div>
+  </div>
+
+  <!-- RISK BANNER -->
+  <div class="risk-banner fade-up d2" id="riskBanner">
+    <div class="risk-stripe critical" id="riskStripe"></div>
+    <div class="risk-gauge">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r="28" fill="none" stroke="var(--line2)" stroke-width="5"/>
+        <circle id="riskArc" cx="36" cy="36" r="28" fill="none" stroke="var(--red)" stroke-width="5"
+          stroke-dasharray="176" stroke-dashoffset="176" stroke-linecap="round"
+          style="transition:stroke-dashoffset 1s ease,stroke .5s"/>
+      </svg>
+      <div class="risk-num"><strong id="riskScore" style="color:var(--red)">—</strong><span>/100</span></div>
+    </div>
+    <div class="risk-body">
+      <div class="risk-title" id="riskTitle">Loading…</div>
+      <div class="risk-desc"  id="riskDesc">Fetching data from Veeam REST API and NVD…</div>
+      <div class="risk-chips" id="riskChips"></div>
+    </div>
+    <div class="risk-actions">
+      <button class="btn-primary" onclick="triggerScan()">▶ Run Scan</button>
+      <button class="btn-ghost"   onclick="exportReport(event)">↓ Export Report</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat fade-up d1"><div class="stat-label">Monitored Instances</div><div class="stat-val c-blue" id="statInstances">—</div><div class="stat-hint" id="statInstancesHint">—</div></div>
+    <div class="stat fade-up d2"><div class="stat-label">Open CVEs</div><div class="stat-val c-red" id="statCves">—</div><div class="stat-hint" id="statCvesHint">—</div></div>
+    <div class="stat fade-up d3"><div class="stat-label">Avg. Patch Delay</div><div class="stat-val c-amber" id="statDelay">—</div><div class="stat-hint">since latest security patch</div></div>
+    <div class="stat fade-up d3"><div class="stat-label">Patch Compliance</div><div class="stat-val c-amber" id="statCompliance">—</div><div class="stat-hint" id="statComplianceHint">—</div></div>
+  </div>
+
+  <!-- CVE + TIMELINE -->
+  <div class="sh fade-up d4">Active CVEs</div>
+  <div class="two-col fade-up d4">
+    <div class="card">
+      <div class="card-head">
+        <div><div class="card-title">CVE Overview — Veeam Data Platform</div><div class="card-sub">Source: NVD API v2 + Veeam KB · matched against installed versions</div></div>
+        <span class="chip chip-red" id="cveCountChip">—</span>
+      </div>
+      <div class="cve-grid" id="cveGrid">
+        <div class="cve-row hdr">
+          <div>CVE ID</div><div>Severity</div><div>CVSS</div><div>Description</div><div>Status</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Patch Timeline</div><div class="card-sub">Security release history</div></div></div>
+      <div class="timeline" id="timeline">
+        <div class="empty">Loading timeline…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSTANCES -->
+  <div class="sh">Instance Status</div>
+  <div class="card fade-up" style="margin-bottom:16px;">
+    <div class="card-head"><div><div class="card-title">Patch Compliance per Instance</div><div class="card-sub">Version pulled via Veeam REST API — GET /api/v1/serverInfo</div></div></div>
+    <div class="instance-row" id="instanceRow">
+      <div class="inst"><div class="skel" style="height:12px;width:60%;margin-bottom:8px"></div><div class="skel" style="height:10px;width:40%"></div></div>
+      <div class="inst"><div class="skel" style="height:12px;width:60%;margin-bottom:8px"></div><div class="skel" style="height:10px;width:40%"></div></div>
+      <div class="inst"><div class="skel" style="height:12px;width:60%;margin-bottom:8px"></div><div class="skel" style="height:10px;width:40%"></div></div>
+    </div>
+  </div>
+
+  <!-- API CODE PANELS -->
+  <div class="sh">API Integration</div>
+  <div class="code-grid fade-up">
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Veeam REST API — Version Query</div><div class="card-sub">POST /api/oauth2/token → GET /api/v1/serverInfo</div></div></div>
+      <div class="code-wrap"><div class="code-box">
+        <div class="code-hdr"><span class="code-file">veeam-api.js</span><div style="display:flex;gap:8px;align-items:center"><span class="code-lang">JS</span><button class="copy-btn" onclick="copyCode('veeamCode')">Copy</button></div></div>
+        <div id="veeamCode"><span class="cmt">// Step 1 — obtain OAuth2 bearer token</span>
+<span class="kw">async function</span> <span class="fn">getToken</span>(host, user, pass) {
+  <span class="kw">const</span> r = <span class="kw">await</span> fetch(
+    <span class="str">`https://${host}:9419/api/oauth2/token`</span>,
+    { method: <span class="str">'POST'</span>,
+      headers: { <span class="str">'Content-Type'</span>:
+        <span class="str">'application/x-www-form-urlencoded'</span> },
+      body: <span class="str">`grant_type=password`</span>
+           +<span class="str">`&username=${user}&password=${pass}`</span>
+    }
+  );
+  <span class="kw">return</span> (await r.json()).access_token;
+}
+<span class="cmt">// Step 2 — read installed build version</span>
+<span class="kw">async function</span> <span class="fn">getVersion</span>(host, token) {
+  <span class="kw">const</span> r = <span class="kw">await</span> fetch(
+    <span class="str">`https://${host}:9419/api/v1/serverInfo`</span>,
+    { headers: {
+        <span class="str">'Authorization'</span>: <span class="str">`Bearer ${token}`</span>
+    }}
+  );
+  <span class="kw">return</span> (await r.json()).buildVersion;
+}</div>
+      </div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">NVD API v2 — CVE Feed for Veeam</div><div class="card-sub">CPE filter · version matching · risk scoring</div></div></div>
+      <div class="code-wrap"><div class="code-box">
+        <div class="code-hdr"><span class="code-file">nvd-cve.js</span><div style="display:flex;gap:8px;align-items:center"><span class="code-lang">JS</span><button class="copy-btn" onclick="copyCode('nvdCode')">Copy</button></div></div>
+        <div id="nvdCode"><span class="cmt">// Fetch Veeam CVEs from NVD API v2</span>
+<span class="kw">async function</span> <span class="fn">fetchCVEs</span>(daysBack = <span class="num">90</span>) {
+  <span class="kw">const</span> end   = <span class="kw">new</span> Date().toISOString();
+  <span class="kw">const</span> start = <span class="kw">new</span> Date(
+    Date.now() - daysBack * <span class="num">86_400_000</span>
+  ).toISOString();
+  <span class="kw">const</span> url = <span class="kw">new</span> URL(
+    <span class="str">'https://services.nvd.nist.gov'</span>
+    +<span class="str">'/rest/json/cves/2.0'</span>
+  );
+  url.searchParams.set(<span class="str">'cpeName'</span>,
+    <span class="str">'cpe:2.3:a:veeam:backup_and_replication:*'</span>);
+  url.searchParams.set(<span class="str">'pubStartDate'</span>, start);
+  url.searchParams.set(<span class="str">'pubEndDate'</span>,   end);
+  <span class="kw">const</span> { vulnerabilities } = <span class="kw">await</span> (
+    <span class="kw">await</span> fetch(url, {
+      headers: { <span class="str">'apiKey'</span>: NVD_API_KEY }
+    })
+  ).json();
+  <span class="kw">return</span> vulnerabilities.map(({ cve }) => ({
+    id:    cve.id,
+    cvss:  cve.metrics?.cvssMetricV31
+             ?.[<span class="num">0</span>]?.cvssData?.baseScore,
+    desc:  cve.descriptions
+             .find(d => d.lang === <span class="str">'en'</span>)?.value
+  }));
+}</div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS + CONFIG -->
+  <div class="sh">Notifications &amp; Configuration</div>
+  <div class="two-col-b fade-up">
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Alert Channels</div><div class="card-sub">Auto-notify on new CVEs or patch delay</div></div></div>
+      <div class="notif-row"><div class="notif-ico">📧</div><div><div class="notif-name">Email Alert</div><div class="notif-hint">it-security@company.com · CRITICAL CVEs</div></div><button class="tgl on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico">💬</div><div><div class="notif-name">Microsoft Teams</div><div class="notif-hint">#it-security · all severities</div></div><button class="tgl on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico">⚡</div><div><div class="notif-name">Slack Webhook</div><div class="notif-hint">#veeam-alerts · HIGH + CRITICAL</div></div><button class="tgl" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico">🔗</div><div><div class="notif-name">Custom Webhook</div><div class="notif-hint">SIEM · ServiceNow · Splunk · Sentinel</div></div><button class="tgl" onclick="this.classList.toggle('on')"></button></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Scan Configuration</div><div class="card-sub">Schedule · thresholds · data sources</div></div></div>
+      <div class="cfg-row"><span class="cfg-k">Scan interval</span><span class="cfg-v">Daily 06:00</span></div>
+      <div class="cfg-row"><span class="cfg-k">CVE source</span><span class="cfg-v">NVD API v2 + Veeam KB</span></div>
+      <div class="cfg-row"><span class="cfg-k">Alert threshold</span><span class="cfg-v">CVSS ≥ 7.0</span></div>
+      <div class="cfg-row"><span class="cfg-k">Patch warning after</span><span class="cfg-v">3 days</span></div>
+      <div class="cfg-row"><span class="cfg-k">Instances monitored</span><span class="cfg-v" id="cfgInstances">3 via REST API</span></div>
+      <div class="cfg-row"><span class="cfg-k">Veeam API port</span><span class="cfg-v">9419 (HTTPS)</span></div>
+      <div class="scan-wrap">
+        <button class="scan-btn" id="scanBtn" onclick="triggerScan()">
+          <span id="sico">⟳</span><span id="slbl">Run Manual Scan</span>
+        </button>
+        <div class="prog-wrap" id="progWrap">
+          <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+          <div class="prog-lbl" id="progLbl">Connecting to Veeam REST API…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════ */
+const BACKEND_URL   = '';   // change if backend runs elsewhere
+const POLL_INTERVAL = 60_000;                    // re-fetch live data every 60s
+let   isLive        = false;
+
+/* ═══════════════════════════════════════════════
+   DEMO DATA  (shown when backend is unreachable)
+═══════════════════════════════════════════════ */
+const DEMO = {
+  lastScan:     new Date().toISOString(),
+  riskScore:    75,
+  riskLevel:    'critical',
+  compliance:   33,
+  avgPatchDays: 4,
+  instances: [
+    { name:'PROD-01', host:'192.168.1.10', version:'13.0.1.2067', status:'ok',       patchAgeDays:0,  affectedCves:[] },
+    { name:'PROD-02', host:'192.168.1.11', version:'13.0.1.1071', status:'outdated', patchAgeDays:4,  affectedCves:['CVE-2026-21671','CVE-2026-21708','CVE-2026-21670','CVE-2026-21672'] },
+    { name:'DR-SITE', host:'10.0.1.5',     version:'12.3.2.4165', status:'critical', patchAgeDays:89, affectedCves:['CVE-2026-21669','CVE-2026-21671','CVE-2026-21708','CVE-2026-21670','CVE-2026-21672'] },
+  ],
+  cves: [
+    { id:'CVE-2026-21669', cvss:9.9, severity:'CRITICAL', summary:'Authenticated domain user RCE on Backup Server',         affectedLabel:'v12 — affected',    patched:false },
+    { id:'CVE-2026-21671', cvss:9.1, severity:'CRITICAL', summary:'RCE in HA deployments via Backup Admin role',             affectedLabel:'v13 — affected',    patched:false },
+    { id:'CVE-2026-21708', cvss:9.9, severity:'CRITICAL', summary:'Backup Viewer can execute RCE as postgres user',          affectedLabel:'v12/v13 — affected', patched:false },
+    { id:'CVE-2026-21670', cvss:7.7, severity:'HIGH',     summary:'Low-privilege user can extract SSH credentials',          affectedLabel:'v12/v13 — affected', patched:false },
+    { id:'CVE-2026-21672', cvss:8.8, severity:'HIGH',     summary:'Local privilege escalation on Windows VBR server',        affectedLabel:'PROD-01 patched',    patched:true  },
+  ],
+  timeline: [
+    { type:'cve',   date:'Mar 14, 2026',  title:'5 new CVEs published',           meta:'KB4831 / KB4830 · max CVSS 9.9' },
+    { type:'patch', date:'Mar 14, 2026',  title:'VBR 13.0.1.2067 released',       meta:'All CVEs addressed · 1 instance updated' },
+    { type:'now',   date:'Currently',     title:'v13.0.1.1071 (2×) · v12.3.2 (1×)', meta:'Vulnerable · update pending', metaColor:'var(--red)' },
+    { type:'patch', date:'Nov 19, 2025',  title:'VBR v13.0.1.1071 (Windows)',     meta:'Previous patch · 4 months ago' },
+    { type:'patch', date:'Sep 3, 2025',   title:'VBR v13.0 (Linux Appliance)',    meta:'Major release · Recon Scanner 3.0' },
+  ],
+};
+
+/* ═══════════════════════════════════════════════
+   DATA FETCHING
+═══════════════════════════════════════════════ */
+async function fetchLive() {
+  const ctrl = new AbortController();
+  const tid   = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const res  = await fetch(`${BACKEND_URL}/api/status`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return json.data;
+  } catch {
+    clearTimeout(tid);
+    return null;
+  }
+}
+
+async function loadData() {
+  const live = await fetchLive();
+
+  if (live) {
+    isLive = true;
+    render(live, true);
+  } else {
+    isLive = false;
+    render(DEMO, false);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════ */
+function render(data, live) {
+  updateBanner(live, data.lastScan);
+  updateSourceBar(data.instances, live);
+  updateRiskBanner(data);
+  updateStats(data);
+  updateCveTable(data.cves);
+  updateTimeline(data.timeline);
+  updateInstances(data.instances);
+  updateLastScan(data.lastScan);
+}
+
+/* Mode banner */
+function updateBanner(live, lastScan) {
+  const el = document.getElementById('modeBanner');
+  document.getElementById('modeLabel').textContent = live ? 'Live' : 'Demo';
+
+  if (live) {
+    el.className = 'mode-banner live';
+    el.innerHTML = `<div class="banner-dot live-anim"></div>
+      <b>Live mode</b> — data from backend at <code>${BACKEND_URL}</code>.
+      Last scan: ${fmtTs(lastScan)}.`;
+  } else {
+    el.className = 'mode-banner demo';
+    el.innerHTML = `<div class="banner-dot"></div>
+      <b>Demo mode</b> — backend not reachable at <code>${BACKEND_URL}</code>.
+      Showing sample data. Start <code>node veeam-backend.js</code> to enable live data.`;
+  }
+  el.style.display = 'flex';
+}
+
+/* Source bar */
+function updateSourceBar(instances, live) {
+  const bar = document.getElementById('sourceBar');
+  const instHtml = (instances ?? []).map(i => {
+    const cls = i.status === 'error' ? 'dot-err' : live ? 'dot-ok' : 'dot-unknown';
+    return `<div class="src"><div class="src-dot ${cls}"></div><b>Veeam API</b>&nbsp;${i.name} · ${i.host ?? ''}</div>`;
+  }).join('');
+  const nvdCls = live ? 'dot-ok' : 'dot-unknown';
+  bar.innerHTML = instHtml
+    + `<div class="src"><div class="src-dot ${nvdCls}"></div><b>NVD API v2</b>&nbsp;nvd.nist.gov</div>`
+    + `<div class="src"><div class="src-dot ${nvdCls}"></div><b>Veeam KB</b>&nbsp;Security Advisories</div>`;
+}
+
+/* Risk banner */
+function updateRiskBanner(data) {
+  const score = data.riskScore ?? 0;
+  const level = data.riskLevel ?? 'low';
+  const cves  = data.cves ?? [];
+  const critN = cves.filter(c => c.severity === 'CRITICAL').length;
+  const highN = cves.filter(c => c.severity === 'HIGH').length;
+
+  // Arc: circumference = 2π*28 ≈ 176 — offset = 176 * (1 - score/100)
+  const offset = 176 * (1 - score / 100);
+  const arcEl  = document.getElementById('riskArc');
+  const colors = { critical:'var(--red)', high:'var(--amber)', medium:'var(--amber)', low:'var(--green)', unknown:'var(--tx3)' };
+  const col    = colors[level] ?? 'var(--tx3)';
+  arcEl.setAttribute('stroke-dashoffset', offset);
+  arcEl.setAttribute('stroke', col);
+
+  document.getElementById('riskScore').textContent = score;
+  document.getElementById('riskScore').style.color = col;
+  document.getElementById('riskStripe').className  = `risk-stripe ${level}`;
+
+  const titles = { critical:'Critical Security Risk Detected', high:'High Security Risk Detected', medium:'Medium Risk — Action Recommended', low:'Environment Secure', unknown:'Assessing Risk…' };
+  document.getElementById('riskTitle').textContent = titles[level] ?? 'Assessing…';
+
+  const affN = (data.instances ?? []).filter(i => (i.affectedCves ?? []).length > 0).length;
+  const totN = (data.instances ?? []).length;
+  document.getElementById('riskDesc').textContent =
+    score > 0
+      ? `${critN} critical CVE${critN !== 1 ? 's' : ''} and ${highN} high CVE${highN !== 1 ? 's' : ''} affect your current Veeam version. ${affN} of ${totN} instances are unpatched.`
+      : 'All instances are up to date. No open CVEs above threshold.';
+
+  const chips = document.getElementById('riskChips');
+  chips.innerHTML = '';
+  if (critN)  chips.innerHTML += `<span class="chip chip-red">${critN}× Critical</span>`;
+  if (highN)  chips.innerHTML += `<span class="chip chip-amber">${highN}× High</span>`;
+  if (data.avgPatchDays > 0) chips.innerHTML += `<span class="chip chip-amber">+${data.avgPatchDays}d avg delay</span>`;
+  if (data.compliance < 100) chips.innerHTML += `<span class="chip chip-blue">${data.compliance}% compliant</span>`;
+  else chips.innerHTML += `<span class="chip chip-green">Fully compliant</span>`;
+}
+
+/* Stats */
+function updateStats(data) {
+  const cves  = data.cves ?? [];
+  const critN = cves.filter(c => c.severity === 'CRITICAL').length;
+  const inst  = data.instances ?? [];
+  const okN   = inst.filter(i => i.status === 'ok').length;
+
+  setText('statInstances', inst.length || '—');
+  setText('statInstancesHint', inst.map(i => `v${(i.version ?? '').split('.')[0]}`).filter(Boolean)
+    .filter((v,i,a) => a.indexOf(v) === i).join(' / ') || '—');
+  setText('statCves', cves.length || '0');
+  setText('statCvesHint', `${critN} critical, ${cves.length - critN} high`);
+  setText('statDelay', data.avgPatchDays != null ? `${data.avgPatchDays}d` : '—');
+  setText('statCompliance', data.compliance != null ? `${data.compliance}%` : '—');
+  setText('statComplianceHint', `${okN} of ${inst.length} up to date`);
+  setText('cfgInstances', `${inst.length} via REST API`);
+}
+
+/* CVE Table */
+function updateCveTable(cves) {
+  const grid = document.getElementById('cveGrid');
+  const count = document.getElementById('cveCountChip');
+
+  // keep header row
+  grid.innerHTML = `<div class="cve-row hdr"><div>CVE ID</div><div>Severity</div><div>CVSS</div><div>Description</div><div>Status</div></div>`;
+  count.textContent = `${(cves ?? []).length} open`;
+
+  if (!cves?.length) {
+    grid.innerHTML += `<div style="grid-column:1/-1"><div class="empty">No CVEs above threshold — environment looks clean ✓</div></div>`;
+    return;
+  }
+
+  cves.forEach(c => {
+    const isCrit = c.severity === 'CRITICAL';
+    const badgeCls = isCrit ? 'badge-crit' : 'badge-high';
+    const cvssCol  = isCrit ? 'r' : 'a';
+    const dotCls   = c.patched ? 'patched' : 'affected';
+    const statusCol = c.patched ? 'var(--green)' : 'var(--red)';
+    grid.innerHTML += `
+      <div class="cve-row">
+        <div><span class="cve-id" onclick="openCVE('${c.id}')">${c.id}</span></div>
+        <div><span class="badge ${badgeCls}">${c.severity}</span></div>
+        <div><span class="cvss ${cvssCol}">${c.cvss ?? '—'}</span></div>
+        <div class="cve-desc">${c.summary ?? ''}</div>
+        <div class="status-cell"><div class="dot ${dotCls}"></div><span style="color:${statusCol}">${c.affectedLabel ?? (c.patched ? 'Patched' : 'Affected')}</span></div>
+      </div>`;
+  });
+}
+
+/* Timeline */
+function updateTimeline(timeline) {
+  const el = document.getElementById('timeline');
+  if (!timeline?.length) { el.innerHTML = '<div class="empty">No timeline data</div>'; return; }
+
+  el.innerHTML = timeline.map(t => `
+    <div class="tl-item">
+      <div class="tl-dot ${t.type}">${t.type === 'cve' ? '!' : t.type === 'patch' ? '✓' : '●'}</div>
+      <div>
+        <div class="tl-date">${t.date ?? ''}</div>
+        <div class="tl-title">${t.title ?? ''}</div>
+        <div class="tl-meta" style="${t.metaColor ? `color:${t.metaColor}` : ''}">${t.meta ?? ''}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* Instances */
+function updateInstances(instances) {
+  const el = document.getElementById('instanceRow');
+  if (!instances?.length) { el.innerHTML = '<div class="inst"><div class="empty">No instances</div></div>'; return; }
+
+  el.style.gridTemplateColumns = `repeat(${instances.length},1fr)`;
+  el.innerHTML = instances.map(inst => {
+    const days    = inst.patchAgeDays ?? 0;
+    const pct     = Math.min(95, Math.round((days / 100) * 100));
+    const fillCls = inst.status === 'ok' ? 'fill-ok' : inst.status === 'critical' ? 'fill-crit' : 'fill-warn';
+    const chipCls = inst.status === 'ok' ? 'chip-green' : inst.status === 'critical' ? 'chip-red' : 'chip-amber';
+    const chipTxt = inst.status === 'ok' ? 'Secure'
+                  : inst.status === 'critical' ? `${inst.affectedCves?.length ?? 0} CVEs — critical`
+                  : `${inst.affectedCves?.length ?? 0} CVEs — update needed`;
+    const dayCol  = inst.status === 'ok' ? 'var(--green)' : inst.status === 'critical' ? 'var(--red)' : 'var(--amber)';
+    return `
+      <div class="inst">
+        <div class="inst-name">${inst.name}</div>
+        <div class="inst-ver">${inst.version ?? 'Unknown'}</div>
+        <div class="bar-label"><span>Patch age</span><span style="color:${dayCol}">${days} day${days !== 1 ? 's' : ''}</span></div>
+        <div class="bar-track"><div class="bar-fill ${fillCls}" style="width:${pct}%"></div></div>
+        <span class="chip ${chipCls}">${chipTxt}</span>
+      </div>`;
+  }).join('');
+
+  // Animate bars
+  setTimeout(() => {
+    el.querySelectorAll('.bar-fill').forEach(b => {
+      const w = b.style.width; b.style.width = '0%';
+      setTimeout(() => { b.style.width = w; }, 80);
+    });
+  }, 100);
+}
+
+function updateLastScan(ts) {
+  document.getElementById('lastScanTs').textContent = ts ? `Last scan: ${fmtTs(ts)}` : '—';
+}
+
+/* ═══════════════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════════════ */
+async function triggerScan() {
+  const btn  = document.getElementById('scanBtn');
+  const wrap = document.getElementById('progWrap');
+  const fill = document.getElementById('progFill');
+  const lbl  = document.getElementById('progLbl');
+  const slbl = document.getElementById('slbl');
+  const sico = document.getElementById('sico');
+
+  if (btn.classList.contains('running')) return;
+  btn.classList.add('running'); slbl.textContent = 'Scanning…'; wrap.classList.add('show');
+
+  // If live: call backend
+  if (isLive) {
+    try {
+      await fetch(`${BACKEND_URL}/api/scan`, { method:'POST' });
+    } catch {}
+  }
+
+  // Progress animation (works in both modes)
+  const steps = [
+    [10,'Connecting to instances…'],[25,'Reading installed versions…'],
+    [45,'Fetching NVD CVE feed…'],[60,'Fetching Veeam KB advisories…'],
+    [75,'Matching versions against CVEs…'],[88,'Calculating risk score…'],[100,'Done ✓']
+  ];
+  let i = 0;
+  const iv = setInterval(async () => {
+    if (i < steps.length) { fill.style.width = steps[i][0]+'%'; lbl.textContent = steps[i][1]; i++; }
+    else {
+      clearInterval(iv);
+      btn.classList.remove('running'); sico.textContent = '✓'; slbl.textContent = 'Scan complete';
+      if (isLive) await loadData();   // reload live results
+      setTimeout(() => {
+        wrap.classList.remove('show'); fill.style.width = '0%';
+        sico.textContent = '⟳'; slbl.textContent = 'Run Manual Scan';
+      }, 3000);
+    }
+  }, 350);
+}
+
+function exportReport(e) {
+  const b = e.currentTarget;
+  b.textContent = '✓ Report ready'; b.style.color = 'var(--green)'; b.style.borderColor = 'rgba(52,211,153,.3)';
+  setTimeout(() => { b.textContent = '↓ Export Report'; b.style.color = ''; b.style.borderColor = ''; }, 2000);
+}
+
+function openCVE(id) { window.open('https://nvd.nist.gov/vuln/detail/'+id,'_blank'); }
+
+function copyCode(id) {
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
+    document.querySelectorAll('.copy-btn').forEach(b => {
+      if (b.getAttribute('onclick')?.includes(id)) {
+        const o = b.textContent; b.textContent = '✓ Copied'; b.style.color = 'var(--green)';
+        setTimeout(() => { b.textContent = o; b.style.color = ''; }, 2000);
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.getElementById('thumb').textContent = dark ? '☀️' : '🌙';
+  document.getElementById('thlbl').textContent  = dark ? 'Dark' : 'Light';
+  localStorage.setItem('vsi-theme', dark ? 'light' : 'dark');
+}
+(function(){
+  const t = localStorage.getItem('vsi-theme');
+  if (t === 'light') {
+    document.documentElement.setAttribute('data-theme','light');
+    document.getElementById('thumb').textContent = '☀️';
+    document.getElementById('thlbl').textContent  = 'Dark';
+  }
+})();
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+function fmtTs(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  } catch { return iso; }
+}
+
+/* ═══════════════════════════════════════════════
+   INIT + POLL
+═══════════════════════════════════════════════ */
+loadData();
+setInterval(() => { if (isLive) loadData(); }, POLL_INTERVAL);
+</script>
+</body>
+</html>
