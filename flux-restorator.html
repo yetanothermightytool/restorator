@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flux Restorator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #c8d0d8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 13px;
+  }
+
+  .window {
+    width: 820px;
+    background: #eceff2;
+    border: 1px solid #6a8aaa;
+    border-radius: 6px 6px 4px 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.28), 0 0 0 1px #b0bfcc;
+  }
+
+  /* Title bar */
+  .titlebar {
+    background: linear-gradient(180deg, #5a8fc4 0%, #3a6fa4 40%, #2e5f8e 100%);
+    padding: 7px 10px 7px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 5px 5px 0 0;
+    border-bottom: 1px solid #1e4a72;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset;
+    transition: background 0.3s;
+  }
+
+  .titlebar-left { display: flex; align-items: center; gap: 8px; }
+  .flux-icon { font-size: 16px; }
+
+  .titlebar h1 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  .titlebar-controls { display: flex; gap: 4px; }
+
+  .ctrl-btn {
+    width: 20px; height: 18px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.35);
+    cursor: pointer;
+    font-size: 10px;
+    color: #222;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold;
+    background: linear-gradient(180deg, #e8eef5 0%, #c8d4e0 100%);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+  }
+  .ctrl-btn:hover { background: linear-gradient(180deg, #f0f6ff 0%, #d8e4f0 100%); }
+
+  /* Content */
+  .content { padding: 16px; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .panel {
+    background: #ffffff;
+    border: 1px solid #a0b4c8;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  .panel-header {
+    background: linear-gradient(180deg, #4f7eb0 0%, #3a6090 100%);
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: center;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    border-bottom: 1px solid #2a5080;
+  }
+
+  .panel-body {
+    padding: 14px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Spinners */
+  .date-row { display: flex; gap: 5px; align-items: flex-end; }
+  .spinner-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .spinner-label { font-size: 10px; color: #607080; letter-spacing: 0.5px; }
+
+  .spinner-wrap {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #88a0bc;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .spinner-wrap input,
+  .spinner-wrap select {
+    background: #ffffff;
+    border: none;
+    outline: none;
+    color: #1a2a3a;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px 3px;
+    -moz-appearance: textfield;
+    -webkit-appearance: none;
+  }
+  .spinner-wrap input { width: 42px; }
+  .spinner-wrap select { width: 46px; cursor: pointer; }
+  .spinner-wrap select option { background: #fff; color: #1a2a3a; }
+  .spinner-wrap input::-webkit-inner-spin-button,
+  .spinner-wrap input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #aabccc;
+  }
+
+  .arr {
+    background: linear-gradient(180deg, #dce8f4 0%, #c8d8ea 100%);
+    border: none;
+    color: #446688;
+    font-size: 8px;
+    cursor: pointer;
+    padding: 2px 5px;
+    line-height: 1;
+    flex: 1;
+  }
+  .arr:hover { background: linear-gradient(180deg, #c8d8f0 0%, #b8c8e0 100%); }
+  .arr:first-child { border-bottom: 1px solid #aabccc; }
+
+  .panel-sublabel { font-size: 10px; color: #708090; margin-top: 2px; }
+
+  /* Display boxes */
+  .display-box {
+    background: #f2f6f2;
+    border: 1px solid #90b090;
+    border-radius: 3px;
+    padding: 10px 14px 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+    width: 100%;
+    text-align: center;
+  }
+
+  .display-box.orange-box {
+    background: #fdf6ea;
+    border-color: #c8a060;
+  }
+
+  .digit-date {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  .digit-time {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    letter-spacing: 3px;
+    margin-top: 3px;
+  }
+
+  .green  { color: #1a8800; }
+  .orange { color: #c47000; }
+
+  /* NOW button */
+  .now-btn {
+    background: linear-gradient(180deg, #e8eef5 0%, #d0dce8 100%);
+    border: 1px solid #88a0bc;
+    border-bottom-color: #6888a4;
+    color: #1a3a5a;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 18px;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-top: 4px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+  }
+  .now-btn:hover { background: linear-gradient(180deg, #f0f6ff 0%, #dce8f4 100%); }
+  .now-btn:active { background: #c8d8ea; box-shadow: inset 0 1px 2px rgba(0,0,0,0.15); }
+
+  /* Restore button */
+  .restore-btn-wrap { display: flex; justify-content: center; padding: 4px 0 14px; }
+
+  .restore-btn {
+    background: linear-gradient(180deg, #5888c0 0%, #3a6aaa 50%, #2e5a96 100%);
+    border: 1px solid #1e4a80;
+    color: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 10px 60px;
+    cursor: pointer;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.25) inset;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    transition: all 0.1s;
+  }
+  .restore-btn:hover:not(:disabled) { background: linear-gradient(180deg, #6898d0 0%, #4a7abc 50%, #3a6aaa 100%); }
+  .restore-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+  .restore-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Separator */
+  .sep {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #a0b4c8 20%, #a0b4c8 80%, transparent);
+    margin-bottom: 12px;
+  }
+
+  /* Status bar */
+  .statusbar {
+    background: #e4eaf0;
+    border: 1px solid #a0b4c8;
+    border-radius: 3px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2a3a4a; }
+  .s-icon { font-size: 13px; }
+  .not-installed { color: #cc4400; font-weight: 700; }
+  .s-ok { color: #1a7700; font-weight: 600; }
+
+  /* Easter egg glow on spinner fields */
+  .spinner-wrap {
+    transition: border-color 0.4s, box-shadow 0.4s;
+  }
+  .spinner-wrap.egg-glow {
+    border-color: #c8a000 !important;
+    box-shadow: 0 0 7px rgba(200,160,0,0.55), inset 0 1px 3px rgba(0,0,0,0.08) !important;
+  }
+
+  .license-link {
+    cursor: pointer;
+    text-decoration: underline dotted;
+  }
+  .license-link:hover { opacity: 0.75; }
+
+  .weather-toggle {
+    cursor: pointer;
+    user-select: none;
+    border-radius: 3px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background 0.15s;
+  }
+  .weather-toggle:hover { background: rgba(0,0,0,0.07); }
+  .weather-unprotected { color: #cc3300 !important; font-weight: 700; }
+
+  /* Footer */
+  .footer {
+    background: linear-gradient(180deg, #d8e0e8 0%, #c8d0d8 100%);
+    border-top: 1px solid #a0b0c0;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 0 0 4px 4px;
+  }
+
+  .footer-text { font-size: 12px; color: #444; }
+  .footer-text strong { color: #1a3a5a; }
+
+  /* ─── Flux Sequence Overlay ─────────────────────────────── */
+  .flux-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 8, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    backdrop-filter: blur(4px);
+  }
+  .flux-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .flux-modal {
+    background: #07080f;
+    border: 1px solid #1a3880;
+    border-radius: 6px;
+    padding: 28px 32px 24px;
+    width: 480px;
+    box-shadow:
+      0 0 60px rgba(40, 100, 255, 0.25),
+      0 0 120px rgba(40, 100, 255, 0.1),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .flux-modal-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #4a7aee;
+    text-align: center;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  .flux-cap-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 22px;
+  }
+
+  .flux-cap-svg {
+    width: 90px;
+    height: 90px;
+    filter: drop-shadow(0 0 6px #3060cc);
+  }
+
+  .fc-arm {
+    stroke-width: 5;
+    stroke-linecap: round;
+    fill: none;
+  }
+  .fc-arm-1 { stroke: #1a3880; animation: armCycle 1.2s 0s infinite; }
+  .fc-arm-2 { stroke: #1a3880; animation: armCycle 1.2s 0.4s infinite; }
+  .fc-arm-3 { stroke: #1a3880; animation: armCycle 1.2s 0.8s infinite; }
+  .fc-node  { fill: #2050cc; animation: nodePulse 1.2s ease-in-out infinite; }
+  .fc-center { fill: #4080ff; }
+
+  @keyframes armCycle {
+    0%, 100% { stroke: #1a3060; }
+    33%       { stroke: #80c0ff; filter: drop-shadow(0 0 4px #80c0ff); }
+    66%       { stroke: #2050cc; }
+  }
+  @keyframes nodePulse {
+    0%, 100% { fill: #1a3060; }
+    33%      { fill: #80c0ff; }
+    66%      { fill: #2050cc; }
+  }
+
+  .flux-overlay.err .fc-arm-1,
+  .flux-overlay.err .fc-arm-2,
+  .flux-overlay.err .fc-arm-3 { animation: armCycleErr 0.6s infinite; }
+  .flux-overlay.err .fc-node  { animation: nodePulseErr 0.6s infinite; }
+  @keyframes armCycleErr {
+    0%, 100% { stroke: #440000; }
+    50%      { stroke: #ff4444; filter: drop-shadow(0 0 6px #ff2200); }
+  }
+  @keyframes nodePulseErr { 0%,100% { fill: #440000; } 50% { fill: #ff4444; } }
+  .flux-overlay.err .flux-cap-svg { filter: drop-shadow(0 0 6px #cc2200); }
+
+  /* Lightning/weather error: yellow arms */
+  .flux-overlay.lightning .fc-arm-1,
+  .flux-overlay.lightning .fc-arm-2,
+  .flux-overlay.lightning .fc-arm-3 { animation: armCycleLightning 0.3s infinite; }
+  .flux-overlay.lightning .fc-node  { animation: nodePulseLightning 0.3s infinite; }
+  @keyframes armCycleLightning {
+    0%, 100% { stroke: #665500; }
+    50%      { stroke: #ffee00; filter: drop-shadow(0 0 8px #ffcc00); }
+  }
+  @keyframes nodePulseLightning { 0%,100% { fill: #443300; } 50% { fill: #ffdd00; } }
+  .flux-overlay.lightning .flux-cap-svg { filter: drop-shadow(0 0 8px #ccaa00); }
+
+  .flux-log {
+    background: #000408;
+    border: 1px solid #1a3060;
+    border-radius: 3px;
+    padding: 10px 12px;
+    height: 130px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: #1a3060 transparent;
+  }
+  .flux-log::-webkit-scrollbar { width: 4px; }
+  .flux-log::-webkit-scrollbar-thumb { background: #1a3060; border-radius: 2px; }
+
+  .log-line {
+    font-size: 11px;
+    color: #4a90e8;
+    line-height: 1.7;
+    opacity: 0;
+    animation: fadeInLine 0.2s forwards;
+  }
+  @keyframes fadeInLine { to { opacity: 1; } }
+  .log-line.log-big { font-size: 12px; font-weight: bold; }
+
+  .flux-progress-track {
+    background: #0a0e1a;
+    border: 1px solid #1a3060;
+    border-radius: 2px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .flux-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #1a40cc, #60a0ff);
+    border-radius: 2px;
+    transition: width 0.4s ease, background 0.3s;
+    box-shadow: 0 0 8px rgba(60, 120, 255, 0.6);
+  }
+
+  .flux-speed {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #1a4080;
+    margin-top: 10px;
+    transition: color 0.3s;
+  }
+  .flux-speed span {
+    font-size: 20px;
+    letter-spacing: 1px;
+    color: #2060cc;
+    display: block;
+    margin-bottom: 2px;
+    transition: color 0.3s, text-shadow 0.3s;
+  }
+
+  @keyframes timeJump {
+    0%   { filter: brightness(1); }
+    15%  { filter: brightness(4) saturate(0) hue-rotate(180deg); }
+    30%  { filter: brightness(0.1); }
+    50%  { filter: brightness(5) hue-rotate(240deg); }
+    70%  { filter: brightness(0.3); }
+    85%  { filter: brightness(3) hue-rotate(60deg); }
+    100% { filter: brightness(1); }
+  }
+  body.time-jump { animation: timeJump 0.7s ease-out; }
+
+  @keyframes errShake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-6px); }
+    40%     { transform: translateX(6px); }
+    60%     { transform: translateX(-4px); }
+    80%     { transform: translateX(4px); }
+  }
+  .flux-modal.shake { animation: errShake 0.4s ease-out; }
+
+  /* ─── License Dialog (Win95 style) ──────────────────────── */
+  .license-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 88888;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .license-overlay.active { opacity: 1; pointer-events: all; }
+
+  .license-dialog {
+    background: #d4d0c8;
+    border: 2px solid #ffffff;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+    border-radius: 3px;
+    width: 400px;
+    box-shadow: 2px 2px 0 #000, inset 1px 1px 0 #ffffff;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+  }
+
+  .license-titlebar {
+    background: linear-gradient(90deg, #0a246a, #a6caf0);
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: default;
+  }
+
+  .license-titlebar-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .license-close-btn {
+    width: 16px; height: 14px;
+    background: linear-gradient(180deg, #e0e0e0, #c0c0c0);
+    border: 1px solid #ffffff;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+    font-size: 9px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #000;
+    box-shadow: inset 1px 1px 0 #dfdfdf;
+  }
+  .license-close-btn:active { border-color: #808080; border-right-color: #fff; border-bottom-color: #fff; }
+
+  .license-body {
+    padding: 16px 18px 14px;
+  }
+
+  .license-product-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .license-icon { font-size: 32px; line-height: 1; }
+
+  .license-product-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #000080;
+  }
+
+  .license-product-version {
+    font-size: 11px;
+    color: #444;
+    margin-top: 2px;
+  }
+
+  .license-text {
+    font-size: 12px;
+    color: #222;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .license-field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .license-field-label { width: 90px; color: #333; font-weight: 600; }
+
+  .license-field-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    background: #fff;
+    border: 1px solid #808080;
+    border-top-color: #404040;
+    border-left-color: #404040;
+    padding: 2px 6px;
+    color: #000;
+    flex: 1;
+  }
+
+  .license-warning-box {
+    background: #fffff0;
+    border: 1px solid #c8a000;
+    padding: 7px 10px;
+    font-size: 11px;
+    color: #664400;
+    margin: 12px 0;
+    line-height: 1.5;
+  }
+
+  .license-error-box {
+    background: #fff0f0;
+    border: 1px solid #cc0000;
+    padding: 7px 10px;
+    font-size: 11px;
+    color: #880000;
+    margin: 12px 0;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .license-btn-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .win95-btn {
+    background: linear-gradient(180deg, #e0e0e0, #c0c0c0);
+    border: 1px solid #ffffff;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+    box-shadow: inset 1px 1px 0 #dfdfdf;
+    font-size: 12px;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 4px 16px;
+    cursor: pointer;
+    min-width: 90px;
+    color: #000;
+  }
+  .win95-btn:active { border-color: #808080; border-right-color: #fff; border-bottom-color: #fff; box-shadow: none; }
+  .win95-btn:disabled { color: #808080; cursor: not-allowed; }
+  .win95-btn.primary { font-weight: 700; border: 2px solid #000080; }
+</style>
+</head>
+<body>
+
+<!-- Flux Sequence Overlay -->
+<div class="flux-overlay" id="fluxOverlay">
+  <div class="flux-modal" id="fluxModal">
+    <div class="flux-modal-title">Temporal Displacement Sequence</div>
+
+    <div class="flux-cap-wrap">
+      <svg class="flux-cap-svg" viewBox="0 0 100 100">
+        <line class="fc-arm fc-arm-1" x1="50" y1="58" x2="50" y2="92"/>
+        <line class="fc-arm fc-arm-2" x1="50" y1="58" x2="16" y2="18"/>
+        <line class="fc-arm fc-arm-3" x1="50" y1="58" x2="84" y2="18"/>
+        <circle class="fc-node" cx="50" cy="92" r="5"/>
+        <circle class="fc-node" cx="16" cy="18" r="5"/>
+        <circle class="fc-node" cx="84" cy="18" r="5"/>
+        <circle class="fc-center" cx="50" cy="58" r="6"/>
+      </svg>
+    </div>
+
+    <div class="flux-log" id="fluxLog"></div>
+
+    <div class="flux-progress-track">
+      <div class="flux-progress-fill" id="fluxProgress"></div>
+    </div>
+
+    <div class="flux-speed" id="fluxSpeed">
+      <span id="fluxSpeedVal">0.0</span> MPH
+    </div>
+    <div id="fluxCloseHint" style="text-align:center; font-size:10px; color:#1a3060; margin-top:10px; letter-spacing:1px; opacity:0; transition:opacity 0.5s;">
+      click anywhere to close
+    </div>
+  </div>
+</div>
+
+<!-- License Dialog -->
+<div class="license-overlay" id="licenseOverlay">
+  <div class="license-dialog">
+    <div class="license-titlebar">
+      <div class="license-titlebar-text">⚡ Flux Restorator — License Manager</div>
+      <button class="license-close-btn" onclick="closeLicense()">✕</button>
+    </div>
+    <div class="license-body">
+      <div class="license-product-row">
+        <div class="license-icon">⚡</div>
+        <div>
+          <div class="license-product-name">Flux Restorator Professional</div>
+          <div class="license-product-version">Version 1.0 — Codename Lone Pine Mall</div>
+        </div>
+      </div>
+
+      <div class="license-text">
+        This product is <strong>NOT LICENSED</strong>. To activate full temporal displacement capabilities, purchase a license key from your nearest Lone Pine Mall branch.
+      </div>
+
+      <div class="license-field-row">
+        <span class="license-field-label">Product Key:</span>
+        <input class="license-field-value" readonly value="BTTF-985X-FLUX-88MP">
+      </div>
+      <div class="license-field-row">
+        <span class="license-field-label">Price:</span>
+        <span style="font-size:12px; font-weight:700; color:#000080;">$ 1,985.00</span>
+        <span style="font-size:11px; color:#666;">(introductory offer)</span>
+      </div>
+
+      <div class="license-warning-box">
+        ⚠ WARNING: Unlicensed temporal displacement may result in paradoxes, alternate timelines, or accidental encounters with Biff Tannen.
+      </div>
+
+      <div class="license-error-box" id="licenseError">
+        ✕ Connection failed: Lone Pine Mall server at 1.21 GW/s — request timed out. Please try again in 30 years.
+      </div>
+
+      <div class="license-btn-row">
+        <button class="win95-btn primary" id="licensePurchaseBtn" onclick="purchaseLicense()">Purchase ($1,985.00)</button>
+        <button class="win95-btn" onclick="closeLicense()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="window">
+
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <span class="flux-icon">⚡</span>
+      <h1>Flux Restorator</h1>
+    </div>
+    <div class="titlebar-controls">
+      <button class="ctrl-btn" title="Minimize">─</button>
+      <button class="ctrl-btn" title="Maximize">□</button>
+      <button class="ctrl-btn" title="Close" style="color:#aa2200;">✕</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="panels">
+
+      <!-- Restore Time -->
+      <div class="panel">
+        <div class="panel-header">Restore Time</div>
+        <div class="panel-body" id="restoreDateSection">
+          <div class="date-row">
+            <div class="spinner-group">
+              <div class="spinner-label">Day</div>
+              <div class="spinner-wrap">
+                <input type="number" id="rDay" value="26" min="1" max="31">
+                <div class="arrow-col">
+                  <button class="arr" onclick="adj('rDay',1,1,31)">▲</button>
+                  <button class="arr" onclick="adj('rDay',-1,1,31)">▼</button>
+                </div>
+              </div>
+            </div>
+            <div class="spinner-group">
+              <div class="spinner-label">Month</div>
+              <div class="spinner-wrap">
+                <select id="rMon">
+                  <option>Jan</option><option>Feb</option><option>Mar</option>
+                  <option>Apr</option><option>May</option><option>Jun</option>
+                  <option>Jul</option><option>Aug</option><option>Sep</option>
+                  <option selected>Oct</option><option>Nov</option><option>Dec</option>
+                </select>
+              </div>
+            </div>
+            <div class="spinner-group">
+              <div class="spinner-label">Year</div>
+              <div class="spinner-wrap">
+                <input type="number" id="rYear" value="1985" min="1985" max="2038" style="width:58px">
+                <div class="arrow-col">
+                  <button class="arr" onclick="adj('rYear',1,1985,2038)">▲</button>
+                  <button class="arr" onclick="adj('rYear',-1,1985,2038)">▼</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="date-row">
+            <div class="spinner-group">
+              <div class="spinner-label">HH</div>
+              <div class="spinner-wrap">
+                <input type="number" id="rHour" value="01" min="0" max="23">
+                <div class="arrow-col">
+                  <button class="arr" onclick="adj('rHour',1,0,23)">▲</button>
+                  <button class="arr" onclick="adj('rHour',-1,0,23)">▼</button>
+                </div>
+              </div>
+            </div>
+            <div class="spinner-group">
+              <div class="spinner-label">MM</div>
+              <div class="spinner-wrap">
+                <input type="number" id="rMin" value="21" min="0" max="59">
+                <div class="arrow-col">
+                  <button class="arr" onclick="adj('rMin',1,0,59)">▲</button>
+                  <button class="arr" onclick="adj('rMin',-1,0,59)">▼</button>
+                </div>
+              </div>
+            </div>
+            <div class="spinner-group">
+              <div class="spinner-label">SS</div>
+              <div class="spinner-wrap">
+                <input type="number" id="rSec" value="00" min="0" max="59">
+                <div class="arrow-col">
+                  <button class="arr" onclick="adj('rSec',1,0,59)">▲</button>
+                  <button class="arr" onclick="adj('rSec',-1,0,59)">▼</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-sublabel">Restore Target (Editable)</div>
+        </div>
+      </div>
+
+      <!-- Actual Date and Time -->
+      <div class="panel">
+        <div class="panel-header">Actual Date and Time</div>
+        <div class="panel-body" style="padding: 20px 10px 14px; justify-content: center;">
+          <div class="display-box">
+            <div class="digit-date green" id="nowDate">-- --- ----</div>
+            <div class="digit-time green" id="nowTime">--:--:--</div>
+          </div>
+          <button class="now-btn" onclick="setNow()">NOW</button>
+        </div>
+      </div>
+
+      <!-- Retention Time Max -->
+      <div class="panel">
+        <div class="panel-header">Retention Time (Max)</div>
+        <div class="panel-body" style="padding: 20px 10px 14px; justify-content: center;">
+          <div class="display-box orange-box">
+            <div class="digit-date orange">19 Jan 2038</div>
+            <div class="digit-time orange">03:14:07</div>
+          </div>
+          <div class="panel-sublabel" style="margin-top:6px;">Signed 32-bit time boundary</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Initiate Restore button -->
+    <div class="restore-btn-wrap">
+      <button class="restore-btn" id="restoreBtn" onclick="initiateRestore()">Initiate Restore</button>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <div class="status-item">
+        <span class="s-icon">⚠️</span>
+        <span>Restores before <strong style="color:#882200;">26 OCT 1985</strong> not supported</span>
+      </div>
+      <div class="status-item">
+        <span class="s-icon">⚡</span>
+        <span>Flux Restorator License:
+          <span class="not-installed license-link" onclick="openLicense()" title="Click to manage license">NOT INSTALLED</span>
+        </span>
+      </div>
+      <div class="status-item weather-toggle" id="weatherToggle" onclick="toggleWeather()" title="Click to toggle weather protection">
+        <span class="s-icon" id="weatherIcon">✅</span>
+        <span class="s-ok" id="weatherLabel">Weather protected</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <span>⚡</span>
+    <span class="footer-text">Flux Restorator v1.0 — <strong>Yet Another Mighty Tool</strong></span>
+  </div>
+
+</div>
+
+<script>
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function pad(n) { return String(n).padStart(2,'0'); }
+
+  // ─── Clock ───────────────────────────────────────────────
+  function updateClock() {
+    const n = new Date();
+    document.getElementById('nowDate').textContent =
+      `${pad(n.getDate())} ${months[n.getMonth()]} ${n.getFullYear()}`;
+    document.getElementById('nowTime').textContent =
+      `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  function adj(id, delta, min, max) {
+    const el = document.getElementById(id);
+    let v = parseInt(el.value) + delta;
+    if (v < min) v = max;
+    if (v > max) v = min;
+    el.value = pad(v);
+  }
+
+  // ─── Easter egg glow ─────────────────────────────────────
+  function checkGlow() {
+    const day    = parseInt(document.getElementById('rDay').value);
+    const monIdx = document.getElementById('rMon').selectedIndex;
+    const year   = parseInt(document.getElementById('rYear').value);
+    const hasEgg = !!getEasterEgg(day, monIdx, year);
+    document.querySelectorAll('#restoreDateSection .spinner-wrap').forEach(el => {
+      el.classList.toggle('egg-glow', hasEgg);
+    });
+  }
+
+  document.getElementById('rDay').addEventListener('input', checkGlow);
+  document.getElementById('rMon').addEventListener('change', checkGlow);
+  document.getElementById('rYear').addEventListener('input', checkGlow);
+  // also hook the arrow buttons
+  document.querySelectorAll('.arr').forEach(btn => btn.addEventListener('click', () => setTimeout(checkGlow, 0)));
+
+  function setNow() {
+    const n = new Date();
+    document.getElementById('rDay').value  = pad(n.getDate());
+    document.getElementById('rMon').selectedIndex = n.getMonth();
+    document.getElementById('rYear').value = n.getFullYear();
+    document.getElementById('rHour').value = pad(n.getHours());
+    document.getElementById('rMin').value  = pad(n.getMinutes());
+    document.getElementById('rSec').value  = pad(n.getSeconds());
+  }
+
+  // ─── Weather toggle ──────────────────────────────────────
+  let weatherProtected = true;
+
+  function toggleWeather() {
+    weatherProtected = !weatherProtected;
+    const icon  = document.getElementById('weatherIcon');
+    const label = document.getElementById('weatherLabel');
+    if (weatherProtected) {
+      icon.textContent  = '✅';
+      label.textContent = 'Weather protected';
+      label.className   = 's-ok';
+    } else {
+      icon.textContent  = '⛈️';
+      label.textContent = 'UNPROTECTED';
+      label.className   = 'weather-unprotected';
+    }
+  }
+
+  // ─── License dialog ──────────────────────────────────────
+  function openLicense() {
+    document.getElementById('licenseError').style.display = 'none';
+    const btn = document.getElementById('licensePurchaseBtn');
+    btn.textContent = 'Purchase ($1,985.00)';
+    btn.disabled = false;
+    document.getElementById('licenseOverlay').classList.add('active');
+  }
+
+  function closeLicense() {
+    document.getElementById('licenseOverlay').classList.remove('active');
+  }
+
+  function purchaseLicense() {
+    const btn = document.getElementById('licensePurchaseBtn');
+    btn.textContent = 'Connecting to Lone Pine Mall...';
+    btn.disabled = true;
+    setTimeout(() => {
+      document.getElementById('licenseError').style.display = 'block';
+      btn.textContent = 'Retry';
+      btn.disabled = false;
+    }, 2200);
+  }
+
+  // Close license dialog on overlay click
+  document.getElementById('licenseOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeLicense();
+  });
+
+  // ─── Easter eggs ────Steve was here─────────────────────────────────────
+  // Key: "day-month(0-indexed)-year" or "day-month" for any year, or "month" for any date in that month
+  const easterEggs = {
+    // Exact dates
+    '21-9-2015':  '🛹 Welcome to the future. Where\'s your hoverboard?',
+    '26-9-1985':  '⏱ Original departure point. Watch for yourself in the parking lot.',
+    '12-10-1955': '🎵 Enchantment Under the Sea Dance — do NOT interfere!',
+    '5-10-1955':  '💡 05 NOV 1955 — Doc\'s eureka moment. Mind the toilet.',
+    // Any year
+    '25-12':      '🎄 Even Santa respects temporal boundaries.',
+    '1-0':        '🎆 New Year temporal reset — calibrating...',
+  };
+
+  function getEasterEgg(day, monIdx, year) {
+    return easterEggs[`${day}-${monIdx}-${year}`]
+        || easterEggs[`${day}-${monIdx}`]
+        || null;
+  }
+
+  // ─── Speed counter ───────────────────────────────────────
+  let speedInterval = null;
+  function animateSpeed(targetMph, durationMs) {
+    const start = performance.now();
+    const el      = document.getElementById('fluxSpeedVal');
+    const colorEl = document.getElementById('fluxSpeed');
+    if (speedInterval) clearInterval(speedInterval);
+    speedInterval = setInterval(() => {
+      const t    = Math.min((performance.now() - start) / durationMs, 1);
+      const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      const mph  = ease * targetMph;
+      el.textContent = mph.toFixed(1);
+      if (mph >= 88) {
+        el.style.color      = '#ffffff';
+        el.style.textShadow = '0 0 12px #ffffff, 0 0 24px #80c0ff';
+        colorEl.style.color = '#80c0ff';
+      } else {
+        el.style.color      = '#2060cc';
+        el.style.textShadow = 'none';
+        colorEl.style.color = '#1a4080';
+      }
+      if (t >= 1) clearInterval(speedInterval);
+    }, 30);
+  }
+
+  function addLog(text, color) {
+    const log  = document.getElementById('fluxLog');
+    const line = document.createElement('div');
+    line.className   = 'log-line' + (color === 'big' ? ' log-big' : '');
+    line.textContent = '> ' + text;
+    if (color && color !== 'big') line.style.color = color;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setProgress(pct, color) {
+    const bar = document.getElementById('fluxProgress');
+    bar.style.width = pct + '%';
+    if (color === 'err') {
+      bar.style.background = 'linear-gradient(90deg, #880000, #ff3300)';
+      bar.style.boxShadow  = '0 0 8px rgba(255,60,0,0.6)';
+    } else if (color === 'lightning') {
+      bar.style.background = 'linear-gradient(90deg, #665500, #ffcc00)';
+      bar.style.boxShadow  = '0 0 8px rgba(255,200,0,0.6)';
+    }
+  }
+
+  // ─── Auto-close with 15s delay + click to dismiss ────────
+  let closeTimer = null;
+  function scheduleClose(overlay, removeClasses, btn, onClose) {
+    const hint = document.getElementById('fluxCloseHint');
+    hint.style.opacity = '1';
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => doClose(overlay, removeClasses, btn, onClose), 15000);
+    overlay._closeHandler = () => doClose(overlay, removeClasses, btn, onClose);
+    overlay.addEventListener('click', overlay._closeHandler, { once: true });
+  }
+
+  function doClose(overlay, removeClasses, btn, onClose) {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+    overlay.removeEventListener('click', overlay._closeHandler);
+    overlay.classList.remove('active', ...removeClasses);
+    document.getElementById('fluxCloseHint').style.opacity = '0';
+    btn.disabled = false;
+    if (onClose) onClose();
+  }
+
+  function resetOverlay() {
+    document.getElementById('fluxLog').innerHTML = '';
+    const bar = document.getElementById('fluxProgress');
+    bar.style.width      = '0%';
+    bar.style.background = 'linear-gradient(90deg, #1a40cc, #60a0ff)';
+    bar.style.boxShadow  = '0 0 8px rgba(60,120,255,0.6)';
+    const sv = document.getElementById('fluxSpeedVal');
+    sv.textContent   = '0.0';
+    sv.style.color   = '#2060cc';
+    sv.style.textShadow = 'none';
+    document.getElementById('fluxSpeed').style.color = '#1a4080';
+    const overlay = document.getElementById('fluxOverlay');
+    overlay.classList.remove('err', 'lightning');
+    document.getElementById('fluxModal').classList.remove('shake');
+    document.getElementById('fluxCloseHint').style.opacity = '0';
+  }
+
+  // ─── Main sequence ───────────────────────────────────────
+  function initiateRestore() {
+    const monIdx = document.getElementById('rMon').selectedIndex;
+    const year   = parseInt(document.getElementById('rYear').value);
+    const day    = parseInt(document.getElementById('rDay').value);
+    const hour   = parseInt(document.getElementById('rHour').value);
+    const min    = parseInt(document.getElementById('rMin').value);
+    const sec    = parseInt(document.getElementById('rSec').value);
+
+    const target     = new Date(year, monIdx, day, hour, min, sec);
+    const earliest   = new Date(1985, 9, 26, 1, 21, 0);
+    const latest     = new Date(2038, 0, 19, 3, 14, 7);
+    const now        = new Date();
+    const isTooEarly = target < earliest;
+    const isTooLate  = target > latest;
+    const isFuture   = !isTooEarly && !isTooLate && target > now;
+    const targetStr  = `${pad(day)} ${months[monIdx]} ${year}  ${pad(hour)}:${pad(min)}:${pad(sec)}`;
+    const egg        = getEasterEgg(day, monIdx, year);
+
+    const btn     = document.getElementById('restoreBtn');
+    const overlay = document.getElementById('fluxOverlay');
+    const modal   = document.getElementById('fluxModal');
+    btn.disabled  = true;
+
+    resetOverlay();
+    overlay.classList.add('active');
+
+    if (isTooLate) {
+      // ── Error: beyond 2038 boundary ──
+      overlay.classList.add('err');
+      animateSpeed(88, 800);
+      const steps = [
+        { t:   0, fn: () => { addLog('Initializing temporal flux matrix...'); setProgress(10); } },
+        { t: 500, fn: () => { addLog('Checking temporal upper boundary...'); setProgress(28); } },
+        { t:1100, fn: () => { addLog('! CRITICAL: Target exceeds 32-bit signed integer limit', '#ff6644'); setProgress(50); } },
+        { t:1700, fn: () => { addLog('! Unix epoch overflow — timestamp: 0x7FFFFFFF + 1 = undefined', '#ff4422'); setProgress(68); } },
+        { t:2300, fn: () => { addLog('! The universe cannot represent this date. It does not exist.', '#ff4422'); setProgress(82); } },
+        { t:2900, fn: () => { addLog('RESTORE ABORTED — integer overflow', 'big'); document.querySelector('.log-line.log-big').style.color = '#ff2200'; setProgress(100, 'err'); } },
+        { t:3300, fn: () => { modal.classList.add('shake'); } },
+        { t:3900, fn: () => { scheduleClose(overlay, ['err'], btn); } },
+      ];
+      steps.forEach(s => setTimeout(s.fn, s.t));
+
+    } else if (isTooEarly) {
+      // ── Error: too early ──
+      overlay.classList.add('err');
+      animateSpeed(61, 1200);
+      const steps = [
+        { t:   0, fn: () => { addLog('Initializing temporal flux matrix...'); setProgress(12); } },
+        { t: 600, fn: () => { addLog('Checking temporal boundary constraints...'); setProgress(30); } },
+        { t:1200, fn: () => {
+            if (egg) addLog(egg, '#ffcc44');
+            addLog('! WARNING: Date precedes flux capacitor invention', '#ff6644');
+            setProgress(55);
+        }},
+        { t:1800, fn: () => { addLog('! Temporal paradox imminent — aborting', '#ff4422'); setProgress(75); } },
+        { t:2400, fn: () => { addLog('RESTORE ABORTED', 'big'); document.querySelector('.log-line.log-big').style.color = '#ff2200'; setProgress(100, 'err'); } },
+        { t:2800, fn: () => { modal.classList.add('shake'); } },
+        { t:3400, fn: () => { scheduleClose(overlay, ['err'], btn); } },
+      ];
+      steps.forEach(s => setTimeout(s.fn, s.t));
+
+    } else if (!weatherProtected) {
+      // ── Error: no weather protection ──
+      overlay.classList.add('lightning');
+      animateSpeed(87, 2000);
+      const steps = [
+        { t:   0, fn: () => { addLog('Initializing temporal flux matrix...'); setProgress(12); } },
+        { t: 600, fn: () => { addLog('Charging flux capacitor...'); setProgress(30); } },
+        { t:1100, fn: () => { addLog('Mr. Fusion output: nominal'); setProgress(48); } },
+        { t:1600, fn: () => { addLog('Speed: 87.2 mph — approaching threshold...'); setProgress(65); } },
+        { t:2100, fn: () => { addLog('⛈️  LIGHTNING STRIKE DETECTED', '#ffee00'); setProgress(80, 'lightning'); } },
+        { t:2600, fn: () => { addLog('! Weather shield offline — surge overload!', '#ffcc00'); setProgress(90, 'lightning'); } },
+        { t:3000, fn: () => { addLog('TEMPORAL SEQUENCE INTERRUPTED', 'big'); document.querySelector('.log-line.log-big').style.color = '#ffcc00'; } },
+        { t:3400, fn: () => { modal.classList.add('shake'); } },
+        { t:4000, fn: () => { scheduleClose(overlay, ['lightning'], btn); } },
+      ];
+      steps.forEach(s => setTimeout(s.fn, s.t));
+
+    } else {
+      // ── Success ──
+      animateSpeed(88, 1400);
+      const steps = [
+        { t:   0, fn: () => { addLog('Initializing temporal flux matrix...'); setProgress(8); } },
+        { t: 500, fn: () => { addLog('Charging flux capacitor...'); setProgress(22); } },
+        { t: 900, fn: () => { addLog('Mr. Fusion output: nominal'); setProgress(38); } },
+        { t:1300, fn: () => { addLog('Stainless steel shell: heat shields active'); setProgress(52); } },
+        { t:1800, fn: () => { addLog('Plutonium chamber: pressurized'); setProgress(66); } },
+        { t:2300, fn: () => { addLog('⚡  88 mph — THRESHOLD REACHED', '#ffff44'); setProgress(80); } },
+        { t:2900, fn: () => {
+            if (isFuture) addLog('⚠ Destination is ahead of current timeline', '#ffdd88');
+            if (isFuture) addLog('Roads? Where we\'re going, we don\'t need roads.', '#ffdd88');
+            if (egg) addLog(egg, '#aaddff');
+            addLog(`Jumping to: ${targetStr}`, '#80c0ff');
+            setProgress(92);
+        }},
+        { t:3400, fn: () => { addLog('GREAT SCOTT! Restore complete!', 'big'); document.querySelector('.log-line.log-big').style.color = '#00ff88'; setProgress(100); } },
+        { t:4000, fn: () => {
+            scheduleClose(overlay, [], btn, () => {
+              document.body.classList.add('time-jump');
+              setTimeout(() => document.body.classList.remove('time-jump'), 800);
+            });
+        }},
+      ];
+      steps.forEach(s => setTimeout(s.fn, s.t));
+    }
+  }
+</script>
+</body>
+</html>
